@@ -1,0 +1,225 @@
+﻿html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Space Shooter Game</title>
+    <style>
+
+        body {
+            background-color: #000;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+        }
+
+        #game-container {
+            position: relative;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #player {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 50px;
+            background-color: red;
+        }
+
+        .arrow {
+            position: absolute;
+            width: 40px;
+            height: 25px;
+            background-color: yellow;
+        }
+
+        .target {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background-color: green;
+        }
+
+        #actions {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            width: 180px;
+            visibility: hidden;
+        }
+
+        #score {
+            margin-top: 20px;
+            font-size: 18px;
+            color: white;
+        }
+
+        #restart {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            margin: 4px 2px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="player"></div>
+        <div id="actions">
+            <button id="restart" onclick="restartGame()">Restart</button>
+            <div id="clock">0s</div>
+        </div>
+        <div id="score">Score: 0</div>
+    </div>
+
+    <script>
+        // Game variables
+        const gameWidth = window.innerWidth;
+        const gameHeight = window.innerHeight;
+        const playerSize = 50;
+        const arrowSize = 25;
+        const targetSize = 30;
+        let playerX = gameWidth / 2 - playerSize / 2;
+        let playerY = gameHeight - playerSize - 20;
+        let playerMoveX = 0;
+        let playerMoveY = 0;
+        const playerSpeed = 10;
+        const arrows = [];
+        const targets = [];
+
+        // Player movement
+        const player = document.getElementById("player");
+
+        document.addEventListener("keydown", movePlayer);
+        document.addEventListener("keyup", stopPlayer);
+
+        function movePlayer(event) {
+            if (event.keyCode === 37) { // Left arrow key
+                playerMoveX = -playerSpeed;
+            } else if (event.keyCode === 39) { // Right arrow key
+                playerMoveX = playerSpeed;
+            } else if (event.keyCode === 38) { // Up arrow key
+                playerMoveY = -playerSpeed;
+            } else if (event.keyCode === 40) { // Down arrow key
+                playerMoveY = playerSpeed;
+            } else if (event.keyCode === 32) { // Space key to shoot
+                shootArrow();
+            }
+        }
+
+        function stopPlayer() {
+            if (event.keyCode === 37 || event.keyCode === 39) { // Left or Right arrow key
+                playerMoveX = 0;
+            } else if (event.keyCode === 38 || event.keyCode === 40) { // Up or Down arrow key
+                playerMoveY = 0;
+            }
+        }
+
+        // Arrows shooting
+        function shootArrow() {
+            const arrow = document.createElement("div");
+            arrow.className = "arrow";
+            arrow.style.left = playerX + playerSize / 2 - arrowSize / 2 + "px";
+            arrow.style.top = playerY - arrowSize + "px";
+            document.body.appendChild(arrow);
+            arrows.push(arrow);
+        }
+
+        // Target generation and movement
+        function createTarget() {
+            const target = document.createElement("div");
+            target.className = "target";
+            target.style.left = Math.floor(Math.random() * (gameWidth - targetSize)) + "px";
+            target.style.top = -targetSize + "px";
+            document.body.appendChild(target);
+            targets.push(target);
+        }
+
+        function moveTargets() {
+            targets.forEach(function (target, index) {
+                const currentTop = parseInt(window.getComputedStyle(target).getPropertyValue('top'));
+                target.style.top = currentTop + 2 + "px";
+
+                // Check if target hits the player
+                if (currentTop > gameHeight - playerSize) {
+                    clearInterval(targetInterval);
+                    clearInterval(gameInterval);
+                    alert("Game Over");
+                    targets.forEach(function (target) {
+                        target.remove();
+                    });
+                }
+
+                // Check if arrow hits the target
+                arrows.forEach(function (arrow) {
+                    const arrowRect = arrow.getBoundingClientRect();
+                    const targetRect = target.getBoundingClientRect();
+
+                    if (arrowRect.left < targetRect.left + targetRect.width &&
+                        arrowRect.left + arrowRect.width > targetRect.left &&
+                        arrowRect.top < targetRect.top + targetRect.height &&
+                        arrowRect.top + arrowRect.height > targetRect.top) {
+                        target.remove();
+                        arrow.remove();
+                        targets.splice(index, 1);
+                        arrows.splice(arrows.indexOf(arrow), 1);
+                    }
+                });
+            });
+        }
+
+        // Game loop
+        const targetInterval = setInterval(createTarget, 2000);
+        const gameInterval = setInterval(gameLoop, 10);
+
+        function gameLoop() {
+            // Update player position
+            playerX += playerMoveX;
+            playerY += playerMoveY;
+
+            // Restrict player movement within game boundaries
+            if (playerX < 0) {
+                playerX = 0;
+            } else if (playerX > gameWidth - playerSize) {
+                playerX = gameWidth - playerSize;
+            }
+
+            if (playerY < 0) {
+                playerY = 0;
+            } else if (playerY > gameHeight - playerSize) {
+                playerY = gameHeight - playerSize;
+            }
+
+            // Move player
+            player.style.left = playerX + "px";
+            player.style.top = playerY + "px";
+
+            // Move arrows
+            arrows.forEach(function (arrow, index) {
+                const currentTop = parseInt(window.getComputedStyle(arrow).getPropertyValue('top'));
+                arrow.style.top = currentTop - 5 + "px";
+
+                // Remove arrows beyond game boundaries
+                if (currentTop < -arrowSize) {
+                    arrow.remove();
+                    arrows.splice(index, 1);
+                }
+            });
+
+            // Move targets
+            moveTargets();
+        }
+    </script>
+</body>
+</html>
+
